@@ -13,6 +13,9 @@ users = {
     "user": "pass"
 }
 
+# Track login attempts
+login_attempts = {}
+
 @app.route('/')
 def index():
     return "Welcome to the app! Go to /login to log in."
@@ -28,11 +31,19 @@ def login():
                 flash('Please provide both username and password', 'danger')
                 return render_template('login.html')
 
+            # Check if the user is locked out
+            if login_attempts.get(username, 0) >= 3:
+                flash('Account locked due to too many failed login attempts', 'danger')
+                logger.warning(f'Account locked for username: {username}')
+                return render_template('login.html')
+
             if username in users and users[username] == password:
                 session['username'] = username
                 flash('Logged in successfully!', 'success')
+                login_attempts[username] = 0  # Reset attempts on successful login
                 return redirect(url_for('dashboard'))
             else:
+                login_attempts[username] = login_attempts.get(username, 0) + 1
                 flash('Invalid username or password', 'danger')
                 logger.warning(f'Failed login attempt for username: {username}')
     except Exception as e:
